@@ -15,14 +15,11 @@ export default function FavoritesPage() {
     queryFn: async () => {
       // Dentro da FavoritesPage.tsx, na sua queryFn:
     const { data, error } = await supabase
-    .from('favorites')
-    .select(`
-    property_id,
-    houses (
-      *,
-      user_profiles(username, email)
-     )
-  ` ) // Use 'houses' aqui, que é o nome real da sua tabela
+  .from('favorites')
+ .select(`
+  property_id,
+  houses (*)
+`) // Mudamos de properties para houses
   .eq('user_id', user!.id)
   .order('created_at', { ascending: false });
 

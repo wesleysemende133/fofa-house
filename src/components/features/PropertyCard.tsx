@@ -20,6 +20,27 @@ export default function PropertyCard({ property, onFavorite, isFavorited: initia
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited || false);
   const mainImage = property.photos[0] || 'https://via.placeholder.com/400x300?text=Sem+Foto';
 
+  
+
+useEffect(() => {
+  const checkPersistedFavorite = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('property_id', Number(property.id))
+      .maybeSingle(); // Uso o maybeSingle para não dar erro se não encontrar
+
+    if (data) {
+      setIsFavorited(true);
+    }
+  };
+
+  checkPersistedFavorite();
+}, [user, property.id]);
+
   // Sincroniza o estado interno se a prop mudar
   useEffect(() => {
     setIsFavorited(initialIsFavorited || false);
