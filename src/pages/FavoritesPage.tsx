@@ -11,22 +11,35 @@ export default function FavoritesPage() {
 
   const { data: favorites, isLoading } = useQuery({
     queryKey: ['favorites', user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('favorites')
-        .select('property_id, properties(*, user_profiles(username, email))')
+        .select(`
+          property_id,
+          houses (
+            *,
+            user_profiles(username, email)
+          )
+        `) // Mudamos para property_id aqui
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data.map(f => f.properties) as Property[];
+      if (error) {
+        console.error("Erro na busca de favoritos:", error.message);
+        throw error;
+      }
+
+      // Mapeamos os dados para extrair o objeto da casa (houses)
+      return (data as any[])
+        .map(f => f.houses)
+        .filter(house => house !== null) as Property[];
     },
   });
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-
       <div className="container mx-auto px-4 py-8 flex-1">
         <h1 className="text-3xl font-bold mb-8">Meus Favoritos</h1>
 
@@ -42,11 +55,11 @@ export default function FavoritesPage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <p className="text-muted-foreground">Ainda não tem favoritos</p>
+            <div className="mb-4 text-6xl text-gray-300 flex justify-center">❤️</div>
+            <p className="text-muted-foreground text-xl">Ainda não guardou nenhuma casa favorita.</p>
           </div>
         )}
       </div>
-
       <Footer />
     </div>
   );
