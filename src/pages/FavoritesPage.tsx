@@ -16,9 +16,13 @@ export default function FavoritesPage() {
       // Dentro da FavoritesPage.tsx, na sua queryFn:
     const { data, error } = await supabase
   .from('favorites')
- .select(`
+// O erro 400 acontecia porque aqui dizia "properties"
+.select(`
   property_id,
-  houses (*)
+  houses (
+    *,
+    user_profiles(username, email)
+  )
 `) // Mudamos de properties para houses
   .eq('user_id', user!.id)
   .order('created_at', { ascending: false });
