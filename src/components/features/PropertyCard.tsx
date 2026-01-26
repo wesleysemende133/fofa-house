@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Property } from '@/types';
 import { formatPrice } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PropertyCardProps {
   property: Property;
@@ -12,43 +15,85 @@ interface PropertyCardProps {
   isFavorited?: boolean;
 }
 
-export default function PropertyCard({ property, onFavorite, isFavorited }: PropertyCardProps) {
+export default function PropertyCard({ property, onFavorite, isFavorited: initialIsFavorited }: PropertyCardProps) {
+  const { user } = useAuth();
+  const [isFavorited, setIsFavorited] = useState(initialIsFavorited || false);
   const mainImage = property.photos[0] || 'https://via.placeholder.com/400x300?text=Sem+Foto';
+
+  // Sincroniza o estado interno se a prop mudar
+  useEffect(() => {
+    setIsFavorited(initialIsFavorited || false);
+  }, [initialIsFavorited]);
+
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      alert("Por favor, faça login para favoritar.");
+      return;
+    }
+
+    // Se você passou uma função personalizada via props (ex: na FavoritesPage)
+    if (onFavorite) {
+      onFavorite(property.id);
+      return;
+    }
+
+    // Lógica padrão para favoritar/desfavoritar
+    try {
+      if (isFavorited) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .match({ 
+            user_id: user.id, 
+            property_id: Number(property.id) // O bigint exige número
+          });
+        if (!error) setIsFavorited(false);
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ 
+            user_id: user.id, 
+            property_id: Number(property.id) 
+          });
+        if (!error) setIsFavorited(true);
+      }
+    } catch (err) {
+      console.error("Erro ao processar favorito:", err);
+    }
+  };
 
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in">
-      <Link to={`/property/${property.id}`}>
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        <Link to={`/property/${property.id}`}>
           <img
             src={mainImage}
             alt={property.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
-          {property.is_premium && (
-            <Badge className="absolute top-3 left-3 gradient-primary border-0 text-white shadow-premium">
-              Premium
-            </Badge>
-          )}
-          {property.is_featured && (
-            <Badge className="absolute top-3 right-3 bg-yellow-500 border-0 text-white">
-              Destaque
-            </Badge>
-          )}
-          {onFavorite && (
-            <Button
-              size="icon"
-              variant="secondary"
-              className="absolute top-3 right-3 rounded-full w-9 h-9 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.preventDefault();
-                onFavorite(property.id);
-              }}
-            >
-              <Heart className={`w-4 h-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-            </Button>
-          )}
-        </div>
-      </Link>
+        </Link>
+        
+        {property.is_premium && (
+          <Badge className="absolute top-3 left-3 gradient-primary border-0 text-white shadow-premium">
+            Premium
+          </Badge>
+        )}
+        
+        {/* Botão de Favorito - Sempre Visível no mobile e hover no desktop */}
+        <Button
+          size="icon"
+          variant="secondary"
+          className={`absolute top-3 right-3 rounded-full w-9 h-9 transition-all duration-300 ${
+            isFavorited ? 'opacity-100 bg-white' : 'opacity-0 group-hover:opacity-100'
+          }`}
+          onClick={handleFavoriteClick}
+        >
+          <Heart className={`w-4 h-4 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+        </Button>
+      </div>
 
       <CardContent className="p-4">
         <Link to={`/property/${property.id}`}>

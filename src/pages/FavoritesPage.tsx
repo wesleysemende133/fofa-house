@@ -13,17 +13,25 @@ export default function FavoritesPage() {
     queryKey: ['favorites', user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('favorites')
-        .select(`
-          property_id,
-          houses (
-            *,
-            user_profiles(username, email)
-          )
-        `) // Mudamos para property_id aqui
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
+      // Dentro da FavoritesPage.tsx, na sua queryFn:
+    const { data, error } = await supabase
+    .from('favorites')
+    .select(`
+    property_id,
+    houses (
+      *,
+      user_profiles(username, email)
+     )
+  ` ) // Use 'houses' aqui, que é o nome real da sua tabela
+  .eq('user_id', user!.id)
+  .order('created_at', { ascending: false });
+
+if (error) throw error;
+
+// O map deve extrair 'houses'
+return (data as any[])
+  .map(f => f.houses)
+  .filter(h => h !== null) as Property[];
 
       if (error) {
         console.error("Erro na busca de favoritos:", error.message);
