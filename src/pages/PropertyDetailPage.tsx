@@ -48,6 +48,29 @@ export default function PropertyDetailPage() {
       return data as Property;
     },
   });
+  useEffect(() => {
+  // Verificamos se 'property' existe e se tem fotos (photos)
+  if (property && Array.isArray(property.photos) && property.photos.length > 0) {
+    const mainPhotoUrl = property.photos[0];
+    
+    // 1. Atualiza o título da aba
+    document.title = `Fofa House | ${property.title}`;
+    
+    // 2. Função segura para atualizar Meta Tags
+    const updateMeta = (selector: string, content: string) => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.setAttribute('content', content);
+      }
+    };
+
+    // Atualiza as tags para as redes sociais verem a foto
+    updateMeta('meta[property="og:image"]', mainPhotoUrl);
+    updateMeta('meta[property="og:title"]', property.title);
+    updateMeta('meta[property="twitter:image"]', mainPhotoUrl);
+    updateMeta('meta[name="description"]', property.description.substring(0, 160));
+  }
+}, [property?.id, property?.photos]); // Dependências específicas para evitar loops infinitos
 
   const { data: isFavorited } = useQuery({
     queryKey: ['favorite', id, user?.id],
@@ -177,29 +200,7 @@ export default function PropertyDetailPage() {
   }
 };
 
-useEffect(() => {
-  // Verificamos se 'property' existe e se tem fotos (photos)
-  if (property && Array.isArray(property.photos) && property.photos.length > 0) {
-    const mainPhotoUrl = property.photos[0];
-    
-    // 1. Atualiza o título da aba
-    document.title = `Fofa House | ${property.title}`;
-    
-    // 2. Função segura para atualizar Meta Tags
-    const updateMeta = (selector: string, content: string) => {
-      const element = document.querySelector(selector);
-      if (element) {
-        element.setAttribute('content', content);
-      }
-    };
 
-    // Atualiza as tags para as redes sociais verem a foto
-    updateMeta('meta[property="og:image"]', mainPhotoUrl);
-    updateMeta('meta[property="og:title"]', property.title);
-    updateMeta('meta[property="twitter:image"]', mainPhotoUrl);
-    updateMeta('meta[name="description"]', property.description.substring(0, 160));
-  }
-}, [property?.id, property?.photos]); // Dependências específicas para evitar loops infinitos
 
   return (
     <div className="min-h-screen flex flex-col">
