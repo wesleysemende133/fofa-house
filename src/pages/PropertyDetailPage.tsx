@@ -177,21 +177,29 @@ export default function PropertyDetailPage() {
   }
 };
 
-
-
-// Dentro do seu componente PropertyDetailPage
 useEffect(() => {
-  if (property && property.photos && property.photos.length > 0) {
-    // Atualiza o título da página
-    document.title = property.title;
+  // Verificamos se 'property' existe e se tem fotos (photos)
+  if (property && Array.isArray(property.photos) && property.photos.length > 0) {
+    const mainPhotoUrl = property.photos[0];
     
-    // Tenta atualizar a meta tag de imagem dinamicamente
-    let metaOgImage = document.querySelector('meta[property="og:image"]');
-    if (metaOgImage) {
-      metaOgImage.setAttribute('content', property.photos[0]);
-    }
+    // 1. Atualiza o título da aba
+    document.title = `Fofa House | ${property.title}`;
+    
+    // 2. Função segura para atualizar Meta Tags
+    const updateMeta = (selector: string, content: string) => {
+      const element = document.querySelector(selector);
+      if (element) {
+        element.setAttribute('content', content);
+      }
+    };
+
+    // Atualiza as tags para as redes sociais verem a foto
+    updateMeta('meta[property="og:image"]', mainPhotoUrl);
+    updateMeta('meta[property="og:title"]', property.title);
+    updateMeta('meta[property="twitter:image"]', mainPhotoUrl);
+    updateMeta('meta[name="description"]', property.description.substring(0, 160));
   }
-}, [property]);
+}, [property?.id, property?.photos]); // Dependências específicas para evitar loops infinitos
 
   return (
     <div className="min-h-screen flex flex-col">
