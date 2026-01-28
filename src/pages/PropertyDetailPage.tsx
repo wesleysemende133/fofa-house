@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Property } from '@/types';
 import { formatPrice, formatDate, getPropertyTypeLabel, getListingTypeLabel } from '@/lib/utils';
+import { useEffect } from 'react';
 import { REPORT_REASONS } from '@/constants';
 
 export default function PropertyDetailPage() {
@@ -175,6 +176,22 @@ export default function PropertyDetailPage() {
     console.log("Erro ao partilhar:", err);
   }
 };
+
+
+
+// Dentro do seu componente PropertyDetailPage
+useEffect(() => {
+  if (property && property.photos && property.photos.length > 0) {
+    // Atualiza o título da página
+    document.title = property.title;
+    
+    // Tenta atualizar a meta tag de imagem dinamicamente
+    let metaOgImage = document.querySelector('meta[property="og:image"]');
+    if (metaOgImage) {
+      metaOgImage.setAttribute('content', property.photos[0]);
+    }
+  }
+}, [property]);
 
   return (
     <div className="min-h-screen flex flex-col">
