@@ -150,6 +150,31 @@ export default function PropertyDetailPage() {
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
+  const handleShare = async () => {
+  if (!property) return;
+
+    const shareData = {
+    title: property.title,
+    text: `Olha este imóvel no Fofa House: ${property.title}`,
+    url: window.location.href, // Pega o link real do seu site na Vercel
+  };
+
+  try {
+    if (navigator.share) {
+      // Abre a janelinha nativa do celular (WhatsApp, Instagram, etc)
+      await navigator.share(shareData);
+    } else {
+      // Se estiver no PC, apenas copia o link
+      await navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link copiado!",
+        description: "O link foi copiado para a área de transferência.",
+      });
+    }
+  } catch (err) {
+    console.log("Erro ao partilhar:", err);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -298,7 +323,11 @@ export default function PropertyDetailPage() {
                   {isFavorited ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos'}
                 </Button>
 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleShare}
+                >
                   <Share2 className="w-4 h-4 mr-2" />
                   Partilhar
                 </Button>
