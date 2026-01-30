@@ -28,26 +28,41 @@ export default function PropertyDetailPage() {
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
 
-  const { data: property, isLoading } = useQuery({
-    queryKey: ['property', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('houses')
-        .select('*, user_profiles(username, email)')
-        .eq('id', id)
-        .single();
+const { data: property, isLoading } = useQuery({
+  queryKey: ['property', id],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('houses')
+      .select('*, user_profiles(username, email)')
+      .eq('id', id)
+      .single();
 
-      if (error) throw error;
+    if (error) throw error;
+    return data as Property;
+  },
+});
 
-      // Increment view count
-      await supabase
-        .from('houses')
-        .update({ view_count: (data.view_count || 0) + 1 })
-        .eq('id', id);
+useEffect(() => {
+  const houseIdNum = parseInt(id as string, 10);
+  
+  if (isNaN(houseIdNum)) {
+    console.warn("Aguardando ID válido para incrementar views...");
+    return;
+  }
 
-      return data as Property;
-    },
-  });
+  /*const increment = async () => {
+    const { error } = await supabase.rpc('increment_house_views', { 
+      house_id: houseIdNum 
+    });
+
+    if (error) {
+      console.error("Erro no RPC:", error.message);
+      // Se der erro 400 aqui, confirma se o nome na tabela é 'id' ou 'house_id'
+    }
+  };
+
+  increment();*/
+}, [id]);
   useEffect(() => {
   // Verificamos se 'property' existe e se tem fotos (photos)
   if (property && Array.isArray(property.photos) && property.photos.length > 0) {

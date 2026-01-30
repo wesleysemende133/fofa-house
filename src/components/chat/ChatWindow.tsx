@@ -3,135 +3,85 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Send } from 'lucide-react';
 
-interface ChatWindowProps {
-  propertyId: number;
-  otherUserId: string;
-}
-
-export default function ChatWindow({ propertyId, otherUserId }: ChatWindowProps) {
+export default function ChatWindow({ propertyId, otherUserId }: { propertyId: number; otherUserId: string }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [otherUser, setOtherUser] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. Carregar dados iniciais
+  // Carregar mensagens e ativar tempo real
   useEffect(() => {
-    if (!user || !propertyId || !otherUserId) return;
+    if (!user || !otherUserId || !propertyId) return;
 
-    const loadData = async () => {
-      // Perfil do outro utilizador
-      const { data: profile } = await supabase.from('user_profiles').select('*').eq('id', otherUserId).single();
-      if (profile) setOtherUser(profile);
-
-      // Histórico de Mensagens
-      const { data: msgs } = await supabase
+    const fetchMessages = async () => {
+      const { data } = await supabase
         .from('messages')
         .select('*')
         .eq('property_id', propertyId)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
-      
-      if (msgs) setMessages(msgs);
+      if (data) setMessages(data);
     };
 
-    loadData();
+    fetchMessages();
 
-    // 2. Ligar o Realtime (Ouvido Aberto)
-    const channel = supabase.channel(`chat_room_${propertyId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `property_id=eq.${propertyId}` },
-        (payload) => {
-          const newMsg = payload.new;
-          // Só adiciona se a mensagem for relevante para ESTA conversa e se eu não for o remetente (para evitar duplicar com a otimista)
-          if (newMsg.sender_id === otherUserId && newMsg.receiver_id === user.id) {
-             setMessages(prev => [...prev, newMsg]);
-          }
+    const channel = supabase.channel(`chat:${propertyId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, 
+      (payload) => {
+        if (payload.new.property_id === propertyId) {
+          setMessages(prev => [...prev, payload.new]);
         }
-      )
-      .subscribe();
+      }).subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, propertyId, otherUserId]);
+  }, [propertyId, otherUserId, user]);
 
-  // Scroll automático
   useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // 3. Enviar Mensagem
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
 
     const content = newMessage;
-    setNewMessage(''); // Limpa o input imediatamente
+    setNewMessage(''); // Limpa o campo imediatamente
 
-    // Criação de mensagem temporária para aparecer logo na tela (Optimistic UI)
-    const optimisticMsg = {
-      id: Date.now(), // ID temporário
-      content,
-      sender_id: user.id,
-      created_at: new Date().toISOString()
-    };
-    
-    setMessages(prev => [...prev, optimisticMsg]);
-
-    // Envio real para o Supabase
     const { error } = await supabase.from('messages').insert({
       content,
+      property_id: propertyId,
       sender_id: user.id,
-      receiver_id: otherUserId,
-      property_id: propertyId
+      receiver_id: otherUserId
     });
 
-    if (error) {
-      console.error('Erro ao enviar:', error);
-      // Aqui poderias remover a mensagem da lista se falhar, mas para já deixamos assim
-    }
+    if (error) console.error("Erro ao enviar:", error.message);
   };
 
-  if (!otherUser) return <div className="p-4">Carregando conversa...</div>;
-
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white">
-      {/* Topo */}
-      <div className="p-3 border-b flex items-center gap-3 bg-white shrink-0">
-        <Avatar>
-            <AvatarImage src={otherUser.avatar_url} />
-            <AvatarFallback>{otherUser.username?.[0]}</AvatarFallback>
-        </Avatar>
-        <span className="font-bold">{otherUser.username}</span>
-      </div>
-
-      {/* Lista de Mensagens */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-        {messages.map((msg, i) => {
-          const isMine = msg.sender_id === user?.id;
-          return (
-            <div key={msg.id || i} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-3 rounded-lg max-w-[75%] text-sm ${
-                isMine ? 'bg-primary text-white rounded-br-none' : 'bg-white border rounded-bl-none'
-              }`}>
-                {msg.content}
-              </div>
+    <div className="flex flex-col h-full bg-white">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+            <div className={`p-3 rounded-lg max-w-[80%] ${
+              msg.sender_id === user?.id ? 'bg-orange-500 text-white' : 'bg-white border'
+            }`}>
+              {msg.content}
             </div>
-          );
-        })}
+          </div>
+        ))}
         <div ref={scrollRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSend} className="p-3 border-t bg-white flex gap-2 shrink-0">
+      <form onSubmit={handleSend} className="p-4 border-t flex gap-2 bg-white">
         <Input 
-          value={newMessage} 
-          onChange={e => setNewMessage(e.target.value)} 
-          placeholder="Digite uma mensagem..." 
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Escreva a sua mensagem..."
           className="flex-1"
         />
-        <Button type="submit" size="icon"><Send className="w-4 h-4" /></Button>
+        <Button type="submit" size="icon" className="bg-orange-600">
+          <Send className="h-4 w-4" />
+        </Button>
       </form>
     </div>
   );
