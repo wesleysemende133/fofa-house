@@ -46,7 +46,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center text-muted-foreground">
                 <Phone className="w-4 h-4 mr-2" />
-                +258 84 123 4567
+                +258 85 170 0363
               </li>
             </ul>
             <div className="flex space-x-3 mt-4">

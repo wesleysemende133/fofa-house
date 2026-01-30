@@ -15,15 +15,17 @@ import { supabase } from '@/lib/supabase';
 import { Property } from '@/types';
 import { PROPERTY_TYPES, LISTING_TYPES, CITIES } from '@/constants';
 import { formatPrice } from '@/lib/utils';
+import { ContactPhoneInput } from "@/components/phone-input"; 
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [phone, setPhone] = useState<string | undefined>("");
   const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [uploading, setUploading] = useState(false);
-
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -53,6 +55,21 @@ export default function DashboardPage() {
       return data as Property[];
     },
   });
+
+  const handleUpdateProfile = async () => {
+    setLoading(true);
+    
+    // O 'phone' aqui já virá formatado como +258XXXXXXXXX
+    const { error } = await supabase
+      .from('profiles') // ou 'users' / 'houses'
+      .update({ contact_phone: phone })
+      .eq('id', user.id);
+
+    if (error) alert("Erro ao atualizar");
+    else alert("Contacto guardado com sucesso!");
+    
+    setLoading(false);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -409,25 +426,26 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Telefone*</label>
-                <Input
-                  value={formData.contact_phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
-                  placeholder="+258 84 123 4567"
-                />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Telefone*</label>
+                  <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
+                    <ContactPhoneInput
+                      value={formData.contact_phone}
+                      onChange={(v: string) => setFormData(prev => ({ ...prev, contact_phone: v }))}
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">WhatsApp (opcional)</label>
-                <Input
-                  value={formData.contact_whatsapp}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contact_whatsapp: e.target.value }))}
-                  placeholder="+258 84 123 4567"
-                />
+                <div>
+                  <label className="text-sm font-medium">WhatsApp (opcional)</label>
+                  <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
+                    <ContactPhoneInput
+                      value={formData.contact_whatsapp}
+                      onChange={(v: string) => setFormData(prev => ({ ...prev, contact_whatsapp: v }))}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-
             <div>
               <label className="text-sm font-medium">Fotos (até 10)</label>
               <Input
