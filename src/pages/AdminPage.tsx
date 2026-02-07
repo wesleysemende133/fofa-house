@@ -15,24 +15,21 @@ export default function AdminPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // 1. Busca apenas as denúncias
-  const { data: reports, isLoading } = useQuery({
-    queryKey: ['admin-reports'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reports')
-        .select(`
-          *,
-          houses (title),
-          user_profiles (username)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+  
+  // 1. Busca as denúncias através da VIEW para evitar erros de tipo (UUID vs TEXT)
+const { data: reports, isLoading } = useQuery({
+  queryKey: ['admin-reports'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('admin_reports_detailed') // Nome da VIEW que criámos no SQL
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data;
-    },
-  });
+    if (error) throw error;
+    return data;
+  },
+});
 
   // 2. Resolve uma denúncia (marca como lida/resolvida)
   const resolveReport = useMutation({
@@ -92,10 +89,12 @@ export default function AdminPage() {
                           Motivo: <span className="text-destructive">{report.reason}</span>
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          Imóvel: <span className="font-medium text-foreground">{report.houses?.title || 'ID: ' + report.property_id}</span>
+                          {/* AGORA USAMOS house_title QUE VEM DA VIEW */}
+                          Imóvel: <span className="font-medium text-foreground">{report.house_title || 'ID: ' + report.property_id}</span>
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Denunciado por: {report.user_profiles?.username || 'Anónimo'} • {formatDate(report.created_at)}
+                          {/* AGORA USAMOS reporter_username QUE VEM DA VIEW */}
+                          Denunciado por: {report.reporter_username || 'Anónimo'} • {formatDate(report.created_at)}
                         </p>
                       </div>
                       <Badge variant="outline">Pendente</Badge>
