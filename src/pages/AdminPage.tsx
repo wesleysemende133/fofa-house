@@ -20,36 +20,50 @@ export default function AdminPage() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
 
-  // --- SEGURANÇA: Verificação de Admin ---
-  useEffect(() => {
-    async function verifyAdmin() {
-      const { data: { user } } = await supabase.auth.getUser();
+ // --- SEGURANÇA: Verificação de Admin ---
+useEffect(() => {
+  async function verifyAdmin() {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (userError || !user) {
+        console.log("Usuário não autenticado");
         navigate('/login');
         return;
       }
 
-      const { data: profile } = await supabase
+      // IMPORTANTE: Buscamos o perfil de forma simples
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Erro ao ler perfil:", profileError.message);
+        // Se der erro de recursão aqui, o problema é 100% no SQL (RLS)
+        return; 
+      }
 
       if (profile?.role === 'admin') {
         setHasAccess(true);
       } else {
+        console.log("Usuário não é admin. Role encontrada:", profile?.role);
         toast({ 
-          title: "Acesso Proibido", 
-          description: "Não tens permissões de administrador.", 
+          title: "Acesso Negado", 
+          description: "Apenas administradores podem acessar esta página.", 
           variant: "destructive" 
         });
-        navigate('/'); // Expulsa o intruso para a home
+        navigate('/'); 
       }
+    } catch (err) {
+      console.error("Erro crítico na verificação:", err);
+    } finally {
       setIsVerifying(false);
     }
-    verifyAdmin();
-  }, [navigate, toast]);
+  }
+  verifyAdmin();
+}, [navigate]);
 
   // --- BUSCA DE DADOS (Só executa se for admin) ---
   const { data: reports, isLoading } = useQuery({
