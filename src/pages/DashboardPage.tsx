@@ -115,14 +115,24 @@ export default function DashboardPage() {
 
   const saveProperty = useMutation({
     mutationFn: async () => {
+      // Função interna para limpar a duplicação do prefixo 258
+      const cleanPrefix = (num: string) => {
+        const digits = num.replace(/\D/g, ''); // Remove tudo que não é número
+        // Se começar com 258258 (duplicado), remove os 3 primeiros dígitos
+        return digits.startsWith('258258') ? digits.substring(3) : digits;
+      };
+
       const propertyData = {
         ...formData,
+        // Limpa os contactos antes de enviar para o banco de dados
+        contact_phone: cleanPrefix(formData.contact_phone),
+        contact_whatsapp: cleanPrefix(formData.contact_whatsapp),
         user_id: user!.id,
         price: parseFloat(formData.price),
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        status: 'active', // Força o status ativo imediatamente
-        is_approved: true // Define como aprovado automaticamente
+        status: 'active',
+        is_approved: true
       };
 
       if (editingProperty) {
@@ -301,7 +311,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
       {/* Property Form Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -311,7 +320,7 @@ export default function DashboardPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Título</label>
+              <label className="text-sm font-medium">Título*</label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
