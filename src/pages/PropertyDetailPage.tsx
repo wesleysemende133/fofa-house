@@ -432,7 +432,7 @@ return (
                 <Button className="w-full" size="lg" asChild variant="outline">
                   <a href={`https://wa.me/258${(property.contact_whatsapp || property.contact_phone || "").replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                     <Phone className="w-4 h-4 mr-2" />
-                    WhatsApp (Moçambique)
+                    WhatsApp
                   </a>
                 </Button>
                 <Button variant="outline" className="w-full" size="lg" asChild>

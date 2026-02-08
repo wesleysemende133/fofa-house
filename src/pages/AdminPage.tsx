@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, Flag, CheckCircle, Loader2, ShieldAlert, History, RefreshCw } from 'lucide-react';
+import { Trash2, CheckCircle, Loader2, ShieldAlert, History, RefreshCw, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/layout/Header';
@@ -18,6 +18,11 @@ export default function AdminPage() {
   
   const [isVerifying, setIsVerifying] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+
+  // --- HELPER: Formatar Dinheiro ---
+  const formatMoney = (value: number) => {
+    return new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
+  };
 
   // --- HELPER: Registar Ação no Log ---
   const logAdminAction = async (action: string, targetId: string, details: string) => {
@@ -121,7 +126,25 @@ export default function AdminPage() {
     enabled: hasAccess,
   });
 
-  // 4. Estatísticas
+  // 4. Inventário Completo (Sem fotos para ser leve)
+  const { data: allHouses, isLoading: loadingHouses } = useQuery({
+    queryKey: ['admin-all-houses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('houses')
+        .select(`
+          id, title, price, city, status, created_at, is_premium,
+          user_profiles (username, email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data;
+    },
+    enabled: hasAccess,
+  });
+
+  // 5. Estatísticas
   const { data: housesCount } = useQuery({
     queryKey: ['admin-houses-count'],
     queryFn: async () => {
@@ -152,35 +175,6 @@ export default function AdminPage() {
     enabled: hasAccess,
   });
 
-  // 5. Buscar todos os imóveis (Modo Lista Rápida)
-const { data: allHouses, isLoading: loadingHouses } = useQuery({
-  queryKey: ['admin-all-houses'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('houses')
-      .select(`
-        id, 
-        title, 
-        price, 
-        city, 
-        status, 
-        created_at, 
-        is_premium,
-        user_profiles (username, email)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(100); // Limite de segurança para não travar
-    if (error) throw error;
-    return data;
-  },
-  enabled: hasAccess,
-});
-
-// Helper para formatar dinheiro (Meticais)
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat('pt-MZ', { style: 'currency', currency: 'MZN' }).format(value);
-};
-
   // --- FILTROS ---
   const admins = users?.filter(u => u.role === 'admin') || [];
   const regularUsers = users?.filter(u => u.role !== 'admin') || [];
@@ -190,14 +184,12 @@ const formatMoney = (value: number) => {
   // Promover/Despromover Admin
   const toggleAdmin = useMutation({
     mutationFn: async ({ userId, newRole, username }: { userId: string, newRole: string | null, username: string }) => {
-      // 1. Atualizar Cargo
       const { error } = await supabase
         .from('user_profiles')
         .update({ role: newRole })
         .eq('id', userId);
       if (error) throw error;
 
-      // 2 Registar no Log
       await logAdminAction(
         newRole === 'admin' ? 'PROMOTE_USER' : 'REVOKE_USER',
         userId,
@@ -206,7 +198,7 @@ const formatMoney = (value: number) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-logs'] }); // Atualiza os logs na hora
+      queryClient.invalidateQueries({ queryKey: ['admin-logs'] });
       toast({ title: "Permissões atualizadas!" });
     }
   });
@@ -225,15 +217,23 @@ const formatMoney = (value: number) => {
     }
   });
 
-  // Banir Imóvel
+  // Banir/Apagar Imóvel
   const deleteProperty = useMutation({
-    mutationFn: async ({ propertyId, reportId }: { propertyId: string, reportId: string }) => {
-      await supabase.from('houses').delete().eq('id', propertyId);
-      await supabase.from('reports').update({ status: 'resolved' }).eq('id', reportId);
-      await logAdminAction('DELETE_HOUSE_BAN', propertyId, 'Imóvel banido por denúncia');
+    mutationFn: async ({ propertyId, reportId }: { propertyId: string, reportId?: string }) => {
+      // 1. Apagar imóvel
+      const { error } = await supabase.from('houses').delete().eq('id', propertyId);
+      if (error) throw error;
+
+      // 2. Se houver denúncia associada, marcar como resolvida
+      if (reportId) {
+        await supabase.from('reports').update({ status: 'resolved' }).eq('id', reportId);
+      }
+
+      await logAdminAction('DELETE_HOUSE', propertyId, 'Imóvel eliminado pelo administrador');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-all-houses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-logs'] });
       queryClient.invalidateQueries({ queryKey: ['admin-houses-count'] });
       toast({ title: 'Imóvel eliminado' });
@@ -288,19 +288,98 @@ const formatMoney = (value: number) => {
         </div>
 
         {/* TABS PRINCIPAIS */}
-        <Tabs defaultValue="reports">
+        <Tabs defaultValue="inventory">
           <TabsList className="mb-6 w-full md:w-auto overflow-x-auto flex justify-start">
+            <TabsTrigger value="inventory">Inventário ({allHouses?.length || 0})</TabsTrigger>
             <TabsTrigger value="reports">
                Denúncias ({reports?.length || 0})
             </TabsTrigger>
-            <TabsTrigger value="users">Gestão de Utilizadores</TabsTrigger>
+            <TabsTrigger value="users">Utilizadores</TabsTrigger>
             <TabsTrigger value="logs" className="flex items-center gap-2">
                <History className="w-4 h-4" /> Auditoria
             </TabsTrigger>
-            <TabsTrigger value="inventory">Inventário ({allHouses?.length || 0})</TabsTrigger>
           </TabsList>
 
-          {/* 1. ABA DE DENÚNCIAS */}
+          {/* 1. ABA DE INVENTÁRIO (TABELA) */}
+          <TabsContent value="inventory">
+            <Card className="overflow-hidden border-0 shadow-md">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-800 text-slate-200 uppercase text-xs font-bold tracking-wider">
+                    <tr>
+                        <th className="p-4">Título do Imóvel</th>
+                        <th className="p-4">Preço</th>
+                        <th className="p-4">Localização</th>
+                        <th className="p-4">Proprietário</th>
+                        <th className="p-4">Estado</th>
+                        <th className="p-4 text-right">Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y bg-white text-slate-700">
+                    {loadingHouses ? (
+                        <tr><td colSpan={6} className="p-8 text-center">A carregar inventário...</td></tr>
+                    ) : allHouses?.map((house: any) => (
+                        <tr key={house.id} className="hover:bg-blue-50 transition-colors group">
+                        <td className="p-4">
+                            <div className="font-bold text-slate-900 truncate max-w-[200px]" title={house.title}>
+                            {house.title}
+                            </div>
+                            <div className="text-xs text-slate-400 mt-1 flex gap-2">
+                            <span>{new Date(house.created_at).toLocaleDateString()}</span>
+                            {house.is_premium && <Badge className="h-4 px-1 text-[10px] bg-amber-500">Premium</Badge>}
+                            </div>
+                        </td>
+                        <td className="p-4 font-mono font-medium">
+                            {formatMoney(house.price)}
+                        </td>
+                        <td className="p-4">
+                            <Badge variant="outline" className="text-slate-500 border-slate-300">
+                            {house.city}
+                            </Badge>
+                        </td>
+                        <td className="p-4">
+                            <div className="text-xs">
+                            <p className="font-medium text-slate-900">{house.user_profiles?.username || 'Desconhecido'}</p>
+                            <p className="text-slate-400">{house.user_profiles?.email}</p>
+                            </div>
+                        </td>
+                        <td className="p-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                            ${house.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                            ${house.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                            ${house.status === 'sold' ? 'bg-slate-100 text-slate-800' : ''}
+                            `}>
+                            {house.status === 'active' ? 'Ativo' : house.status === 'pending' ? 'Pendente' : house.status}
+                            </span>
+                        </td>
+                        <td className="p-4 text-right">
+                            <div className="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600" onClick={() => window.open(`/property/${house.id}`, '_blank')}>
+                                <ExternalLink className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                    if(confirm('Tem a certeza que deseja apagar este imóvel permanentemente?')) {
+                                        deleteProperty.mutate({ propertyId: house.id }); 
+                                    }
+                                }}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                            </div>
+                        </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                </div>
+            </Card>
+          </TabsContent>
+
+          {/* 2. ABA DE DENÚNCIAS */}
           <TabsContent value="reports" className="space-y-4">
             {isLoading ? (
               <p>A carregar...</p>
@@ -332,10 +411,9 @@ const formatMoney = (value: number) => {
             )}
           </TabsContent>
 
-          {/* 2. ABA DE UTILIZADORES */}
+          {/* 3. ABA DE UTILIZADORES */}
           <TabsContent value="users">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* ADMINS */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b">
                   <ShieldAlert className="w-5 h-5 text-primary" />
@@ -364,7 +442,6 @@ const formatMoney = (value: number) => {
                 </Card>
               </div>
 
-              {/* UTILIZADORES */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b">
                   <CheckCircle className="w-5 h-5 text-slate-400" />
@@ -393,7 +470,7 @@ const formatMoney = (value: number) => {
             </div>
           </TabsContent>
 
-          {/* 3. ABA DE LOGS (AUDITORIA) */}
+          {/* 4. ABA DE LOGS */}
           <TabsContent value="logs">
             <div className="flex justify-end mb-2">
                 <Button variant="ghost" size="sm" onClick={() => refetchLogs()}>
@@ -426,115 +503,12 @@ const formatMoney = (value: number) => {
                         <td className="p-4 text-slate-600">{log.details}</td>
                       </tr>
                     ))}
-                    {auditLogs?.length === 0 && (
-                        <tr>
-                            <td colSpan={4} className="p-8 text-center text-slate-500">
-                                Nenhum registo de atividade encontrado.
-                            </td>
-                        </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
             </Card>
           </TabsContent>
-            <TabsContent value="inventory">
-  <Card className="overflow-hidden border-0 shadow-md">
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm text-left">
-        {/* CABEÇALHO DA TABELA */}
-        <thead className="bg-slate-800 text-slate-200 uppercase text-xs font-bold tracking-wider">
-          <tr>
-            <th className="p-4">Título do Imóvel</th>
-            <th className="p-4">Preço</th>
-            <th className="p-4">Localização</th>
-            <th className="p-4">Proprietário</th>
-            <th className="p-4">Estado</th>
-            <th className="p-4 text-right">Ações</th>
-          </tr>
-        </thead>
-        
-        {/* CORPO DA TABELA */}
-        <tbody className="divide-y bg-white text-slate-700">
-          {loadingHouses ? (
-            <tr><td colSpan={6} className="p-8 text-center">A carregar inventário...</td></tr>
-          ) : allHouses?.map((house: any) => (
-            <tr key={house.id} className="hover:bg-blue-50 transition-colors group">
-              
-              {/* Coluna 1: Título e Data */}
-              <td className="p-4">
-                <div className="font-bold text-slate-900 truncate max-w-[200px]" title={house.title}>
-                  {house.title}
-                </div>
-                <div className="text-xs text-slate-400 mt-1 flex gap-2">
-                  <span>{new Date(house.created_at).toLocaleDateString()}</span>
-                  {house.is_premium && <Badge className="h-4 px-1 text-[10px] bg-amber-500">Premium</Badge>}
-                </div>
-              </td>
 
-              {/* Coluna 2: Preço */}
-              <td className="p-4 font-mono font-medium">
-                {formatMoney(house.price)}
-              </td>
-
-              {/* Coluna 3: Cidade */}
-              <td className="p-4">
-                <Badge variant="outline" className="text-slate-500 border-slate-300">
-                  {house.city}
-                </Badge>
-              </td>
-
-              {/* Coluna 4: Dono */}
-              <td className="p-4">
-                <div className="text-xs">
-                  <p className="font-medium text-slate-900">{house.user_profiles?.username || 'Desconhecido'}</p>
-                  <p className="text-slate-400">{house.user_profiles?.email}</p>
-                </div>
-              </td>
-
-              {/* Coluna 5: Status (Colorido) */}
-              <td className="p-4">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                  ${house.status === 'active' ? 'bg-green-100 text-green-800' : ''}
-                  ${house.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                  ${house.status === 'sold' ? 'bg-slate-100 text-slate-800' : ''}
-                `}>
-                  {house.status === 'active' ? 'Ativo' : house.status === 'pending' ? 'Pendente' : house.status}
-                </span>
-              </td>
-
-              {/* Coluna 6: Botões de Ação */}
-              <td className="p-4 text-right">
-                <div className="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  {/* Botão Ver no Site */}
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600" onClick={() => window.open(`/property/${house.id}`, '_blank')}>
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
-                  
-                  {/* Botão Apagar */}
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-8 w-8 text-red-600 hover:bg-red-50"
-                    onClick={() => {
-                        if(confirm('Tem a certeza que deseja apagar este imóvel permanentemente?')) {
-                            // Podes reutilizar a tua função de deleteProperty aqui, 
-                            // mas terás de ajustar para não exigir reportId se não houver denúncia
-                            deleteProperty.mutate({ propertyId: house.id, reportId: '' }); 
-                        }
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </Card>
-</TabsContent>
         </Tabs>
       </main>
       <Footer />

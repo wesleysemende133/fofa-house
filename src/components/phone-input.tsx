@@ -14,7 +14,7 @@ export function ContactPhoneInput({ value, onChange, className }: any) {
       <PhoneInput
         international
         defaultCountry="MZ"
-        displayDefaultCode={false} // Remove o +258 inicial do campo de texto
+        displayDefaultCode={true} 
         placeholder="84 123 4567"
         value={value}
         onChange={onChange}

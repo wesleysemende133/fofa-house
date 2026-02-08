@@ -311,7 +311,7 @@ export default function DashboardPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Título*</label>
+              <label className="text-sm font-medium">Título</label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
@@ -320,7 +320,7 @@ export default function DashboardPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Descrição*</label>
+              <label className="text-sm font-medium">Descrição</label>
               <Textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -331,7 +331,7 @@ export default function DashboardPage() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium">Preço (MT)*</label>
+                <label className="text-sm font-medium">Preço (MT)</label>
                 <Input
                   type="number"
                   value={formData.price}
@@ -341,7 +341,7 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Tipo de Imóvel*</label>
+                <label className="text-sm font-medium">Tipo de Imóvel</label>
                 <select
                   value={formData.property_type}
                   onChange={(e) => setFormData(prev => ({ ...prev, property_type: e.target.value }))}
@@ -355,7 +355,7 @@ export default function DashboardPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Tipo de Anúncio*</label>
+              <label className="text-sm font-medium">Tipo de Anúncio</label>
               <select
                 value={formData.listing_type}
                 onChange={(e) => setFormData(prev => ({ ...prev, listing_type: e.target.value }))}
@@ -369,7 +369,7 @@ export default function DashboardPage() {
 
             <div className="grid md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium">Cidade*</label>
+                <label className="text-sm font-medium">Cidade</label>
                 <select
                   value={formData.city}
                   onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
@@ -383,7 +383,7 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Distrito*</label>
+                <label className="text-sm font-medium">Distrito</label>
                 <Input
                   value={formData.district}
                   onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
@@ -427,7 +427,7 @@ export default function DashboardPage() {
 
             <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Telefone*</label>
+                  <label className="text-sm font-medium">Telefone</label>
                   <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
                     <ContactPhoneInput
                       value={formData.contact_phone}
@@ -437,7 +437,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">WhatsApp (opcional)</label>
+                  <label className="text-sm font-medium">WhatsApp</label>
                   <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
                     <ContactPhoneInput
                       value={formData.contact_whatsapp}
