@@ -116,39 +116,38 @@ return (
       </div>
     </div>
 
-      {/* Mobile Navigation (Barra Inferior) */}
-      {user && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t pb-[safe-area-inset-bottom]">
-          <div className="grid grid-cols-5 gap-1 p-2">
-            <Link to="/" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
-              <Home className="w-5 h-5 mb-0.5" /> 
-              Início
-            </Link>
-            
-            <Link to="/search" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
-              <Search className="w-5 h-5 mb-0.5" /> 
-              Procurar
-            </Link>
+{/* Mobile Navigation (Barra Inferior) - FIXA NO FUNDO */}
+{user && (
+  <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-background border-t shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pb-[safe-area-inset-bottom]">
+    <div className="grid grid-cols-5 gap-1 p-2">
+      <Link to="/" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
+        <Home className="w-5 h-5 mb-0.5" /> 
+        Início
+      </Link>
+      
+      <Link to="/search" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
+        <Search className="w-5 h-5 mb-0.5" /> 
+        Procurar
+      </Link>
 
-            {/* Botão de Mensagens agora com a mesma cor padrão (text-muted-foreground) */}
-            <Link to="/messages" className="relative flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
-              <MessageSquare className="w-5 h-5 mb-0.5" />
-              <NotificationBadge />
-              Mensagens
-            </Link>
+      <Link to="/messages" className="relative flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
+        <MessageSquare className="w-5 h-5 mb-0.5" />
+        <NotificationBadge />
+        Mensagens
+      </Link>
 
-            <Link to="/favorites" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
-              <Heart className="w-5 h-5 mb-0.5" /> 
-              Favoritos
-            </Link>
+      <Link to="/favorites" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
+        <Heart className="w-5 h-5 mb-0.5" /> 
+        Favoritos
+      </Link>
 
-            <Link to="/dashboard" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
-              <LayoutDashboard className="w-5 h-5 mb-0.5" /> 
-              Painel
-            </Link>
-          </div>
-        </div>
-      )}
+      <Link to="/dashboard" className="flex flex-col items-center justify-center py-2 text-[10px] text-muted-foreground hover:text-primary transition-colors">
+        <LayoutDashboard className="w-5 h-5 mb-0.5" /> 
+        Painel
+      </Link>
+    </div>
+  </div>
+)}
   </header>
 );
 }

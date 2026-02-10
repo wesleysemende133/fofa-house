@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Eye } from 'lucide-react';
+import { LogOut, User, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -18,7 +21,7 @@ import { formatPrice } from '@/lib/utils';
 import { ContactPhoneInput } from "@/components/phone-input";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const [phone, setPhone] = useState<string | undefined>("");
   const queryClient = useQueryClient();
@@ -26,6 +29,7 @@ export default function DashboardPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [uploading, setUploading] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -41,6 +45,23 @@ export default function DashboardPage() {
     contact_whatsapp: '',
     photos: [] as string[],
   });
+
+  const handleLogout = async () => {
+    try {
+    toast({
+      title: "Sessão encerrada",
+      description: "Você saiu da sua conta com sucesso.",
+    });
+    navigate('/');
+  } catch (error) {
+    // Versão correta para erro
+    toast({
+      variant: "destructive", // Isso deixa o toast vermelho
+      title: "Erro ao sair",
+      description: "Não foi possível encerrar sua sessão. Tente novamente.",
+    });
+  }
+  };
 
   const { data: properties, isLoading } = useQuery({
     queryKey: ['my-properties', user?.id],
