@@ -89,6 +89,7 @@ useEffect(() => {
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 animate-fade-in">
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        {/* LINK 1: Imagem */}
         <Link to={`/property/${property.id}`}>
           <img
             src={mainImage}
@@ -103,11 +104,10 @@ useEffect(() => {
           </Badge>
         )}
         
-        {/* Botão de Favorito - Sempre Visível no mobile e hover no desktop */}
         <Button
           size="icon"
           variant="secondary"
-          className={`absolute top-3 right-3 rounded-full w-9 h-9 transition-all duration-300 ${
+          className={`absolute top-3 right-3 rounded-full w-9 h-9 transition-all duration-300 z-20 ${
             isFavorited ? 'opacity-100 bg-white' : 'opacity-0 group-hover:opacity-100'
           }`}
           onClick={handleFavoriteClick}
@@ -117,48 +117,46 @@ useEffect(() => {
       </div>
 
       <CardContent className="p-4">
-        <Link to={`/property/${property.id}`}>
-          <div className="space-y-2">
-  {/* Link apenas no Título e Info - NÃO envolve o botão de baixo */}
-  <Link to={`/property/${property.id}`} className="block group/title">
-    <div className="flex items-start justify-between gap-2">
-      <h3 className="font-semibold text-lg line-clamp-1 group-hover/title:text-primary transition-colors">
-        {property.title}
-      </h3>
-      <Badge variant={property.listing_type === 'sale' ? 'default' : 'secondary'}>
-        {property.listing_type === 'sale' ? 'Venda' : 'Aluguer'}
-      </Badge>
-    </div>
+        <div className="space-y-2">
+          {/* LINK 2: Título, Preço e Localização */}
+          <Link to={`/property/${property.id}`} className="block space-y-2 group/info">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-lg line-clamp-1 group-hover/info:text-primary transition-colors">
+                {property.title}
+              </h3>
+              <Badge variant={property.listing_type === 'sale' ? 'default' : 'secondary'}>
+                {property.listing_type === 'sale' ? 'Venda' : 'Aluguer'}
+              </Badge>
+            </div>
 
-    <p className="text-2xl font-bold text-primary">
-      {formatPrice(property.price)} MT
-    </p>
+            <p className="text-2xl font-bold text-primary">
+              {formatPrice(property.price)} MT
+            </p>
 
-    <div className="flex items-center text-sm text-muted-foreground">
-      <MapPin className="w-4 h-4 mr-1" />
-      {property.neighborhood}, {property.district}, {property.city}
-    </div>
-  </Link>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4 mr-1" />
+              {property.neighborhood}, {property.district}, {property.city}
+            </div>
+          </Link>
 
-  {/* Área do Botão - Fica FORA do Link acima */}
-  <div className="flex items-center justify-between pt-2 border-t">
-    <span className="text-xs text-muted-foreground capitalize">
-      {property.property_type}
-    </span>
-    <Button size="sm" variant="ghost" asChild>
-      <a 
-        href={`https://wa.me/${property.contact_whatsapp || property.contact_phone}`} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()} // Segurança extra
-      >
-        <Phone className="w-4 h-4 mr-1" />
-        Contactar
-      </a>
-    </Button>
-  </div>
-</div>
-        </Link>
+          {/* RODAPÉ: Fora de qualquer Link para evitar o erro <a> inside <a> */}
+          <div className="flex items-center justify-between pt-2 border-t mt-2">
+            <span className="text-xs text-muted-foreground capitalize">
+              {property.property_type}
+            </span>
+            <Button size="sm" variant="ghost" asChild>
+              <a 
+                href={`https://wa.me/${(property.contact_whatsapp || property.contact_phone || "").replace(/\D/g, '')}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Phone className="w-4 h-4 mr-1" />
+                Contactar
+              </a>
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

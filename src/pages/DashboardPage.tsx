@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { Property } from '@/types';
 import { PROPERTY_TYPES, LISTING_TYPES, CITIES } from '@/constants';
 import { formatPrice } from '@/lib/utils';
-import { ContactPhoneInput } from "@/components/phone-input"; 
+import { ContactPhoneInput } from "@/components/phone-input";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -58,16 +58,15 @@ export default function DashboardPage() {
 
   const handleUpdateProfile = async () => {
     setLoading(true);
-    
-    // O 'phone' aqui já virá formatado como +258XXXXXXXXX
+
     const { error } = await supabase
-      .from('profiles') // ou 'users' / 'houses'
+      .from('profiles')
       .update({ contact_phone: phone })
-      .eq('id', user.id);
+      .eq('id', user!.id);
 
     if (error) alert("Erro ao atualizar");
     else alert("Contacto guardado com sucesso!");
-    
+
     setLoading(false);
   };
 
@@ -115,19 +114,19 @@ export default function DashboardPage() {
 
   const saveProperty = useMutation({
     mutationFn: async () => {
-      // Função interna para limpar a duplicação do prefixo 258
-      const cleanPrefix = (num: string) => {
-        const digits = num.replace(/\D/g, ''); // Remove tudo que não é número
-        // Se começar com 258258 (duplicado), remove os 3 primeiros dígitos
-        return digits.startsWith('258258') ? digits.substring(3) : digits;
+      // Função para evitar duplicação do prefixo 258 ao salvar
+      const cleanPhone = (num: string) => {
+        const raw = num.replace(/\D/g, ''); // Remove caracteres não numéricos
+        // Se começar com 258258, remove os primeiros 3 dígitos
+        return raw.startsWith('258258') ? raw.substring(3) : raw;
       };
 
       const propertyData = {
         ...formData,
-        // Limpa os contactos antes de enviar para o banco de dados
-        contact_phone: cleanPrefix(formData.contact_phone),
-        contact_whatsapp: cleanPrefix(formData.contact_whatsapp),
         user_id: user!.id,
+        // Limpa os números antes de enviar
+        contact_phone: cleanPhone(formData.contact_phone),
+        contact_whatsapp: cleanPhone(formData.contact_whatsapp),
         price: parseFloat(formData.price),
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
@@ -152,9 +151,9 @@ export default function DashboardPage() {
       queryClient.invalidateQueries({ queryKey: ['my-properties'] });
       setShowDialog(false);
       resetForm();
-      toast({ 
-        title: editingProperty ? 'Imóvel atualizado' : 'Imóvel publicado!', 
-        description: 'O seu imóvel já está visível para todos os utilizadores.' 
+      toast({
+        title: editingProperty ? 'Imóvel atualizado' : 'Imóvel publicado!',
+        description: 'O seu imóvel já está visível para todos os utilizadores.'
       });
     },
     onError: (error: any) => {
@@ -196,6 +195,13 @@ export default function DashboardPage() {
   };
 
   const openEditDialog = (property: Property) => {
+    // Função para limpar visualmente se o dado vier corrompido do banco
+    const cleanPhone = (val: string | null) => {
+      if (!val) return "";
+      const raw = val.replace(/\D/g, '');
+      return raw.startsWith('258258') ? raw.substring(3) : raw;
+    };
+
     setEditingProperty(property);
     setFormData({
       title: property.title,
@@ -208,8 +214,8 @@ export default function DashboardPage() {
       neighborhood: property.neighborhood,
       latitude: property.latitude?.toString() || '',
       longitude: property.longitude?.toString() || '',
-      contact_phone: property.contact_phone,
-      contact_whatsapp: property.contact_whatsapp || '',
+      contact_phone: cleanPhone(property.contact_phone),
+      contact_whatsapp: cleanPhone(property.contact_whatsapp || ''),
       photos: property.photos || [],
     });
     setShowDialog(true);
@@ -251,7 +257,7 @@ export default function DashboardPage() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                
+
                 <div>
                   <h3 className="font-semibold line-clamp-1">{property.title}</h3>
                   <p className="text-sm text-muted-foreground">{property.city}</p>
@@ -262,8 +268,8 @@ export default function DashboardPage() {
 
                 <div className="flex gap-2">
                   <Badge variant={property.status === 'active' ? 'default' : 'secondary'}>
-  {property.status === 'active' ? 'Online / Ativo' : 'Inativo'}
-</Badge>
+                    {property.status === 'active' ? 'Online / Ativo' : 'Inativo'}
+                  </Badge>
                   {property.is_premium && (
                     <Badge className="gradient-primary border-0">Premium</Badge>
                   )}
@@ -311,6 +317,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
       {/* Property Form Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -435,26 +442,27 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Telefone</label>
-                  <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
-                    <ContactPhoneInput
-                      value={formData.contact_phone}
-                      onChange={(v: string) => setFormData(prev => ({ ...prev, contact_phone: v }))}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">WhatsApp</label>
-                  <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
-                    <ContactPhoneInput
-                      value={formData.contact_whatsapp}
-                      onChange={(v: string) => setFormData(prev => ({ ...prev, contact_whatsapp: v }))}
-                    />
-                  </div>
+              <div>
+                <label className="text-sm font-medium">Telefone</label>
+                <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
+                  <ContactPhoneInput
+                    value={formData.contact_phone}
+                    onChange={(v: string) => setFormData(prev => ({ ...prev, contact_phone: v }))}
+                  />
                 </div>
               </div>
+
+              <div>
+                <label className="text-sm font-medium">WhatsApp</label>
+                <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1 focus-within:ring-2 focus-within:ring-ring">
+                  <ContactPhoneInput
+                    value={formData.contact_whatsapp}
+                    onChange={(v: string) => setFormData(prev => ({ ...prev, contact_whatsapp: v }))}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="text-sm font-medium">Fotos (até 10)</label>
               <Input

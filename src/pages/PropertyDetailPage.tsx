@@ -44,26 +44,32 @@ const { data: property, isLoading } = useQuery({
 });
 
 useEffect(() => {
+  // 1. Validar se o ID existe e é um número
   const houseIdNum = parseInt(id as string, 10);
   
-  if (isNaN(houseIdNum)) {
-    console.warn("Aguardando ID válido para incrementar views...");
-    return;
-  }
+  if (isNaN(houseIdNum)) return;
 
-  /*const increment = async () => {
-    const { error } = await supabase.rpc('increment_house_views', { 
-      house_id: houseIdNum 
-    });
+  const incrementViews = async () => {
+    try {
+      // 2. Chamar a função RPC que criamos no SQL
+      const { error } = await supabase.rpc('increment_house_views', { 
+        house_id: houseIdNum 
+      });
 
-    if (error) {
-      console.error("Erro no RPC:", error.message);
-      // Se der erro 400 aqui, confirma se o nome na tabela é 'id' ou 'house_id'
+      if (error) {
+        console.error("Erro ao incrementar views:", error.message);
+      }
+    } catch (err) {
+      console.error("Erro inesperado:", err);
     }
   };
 
-  increment();*/
-}, [id]);
+  // 3. Executar
+  incrementViews();
+  
+  // Opcional: Você pode salvar no sessionStorage para não contar 
+  // visualizações repetidas do mesmo usuário na mesma aba.
+}, [id]); // Executa sempre que o ID na URL mudar
   useEffect(() => {
   // Verificamos se 'property' existe e se tem fotos (photos)
   if (property && Array.isArray(property.photos) && property.photos.length > 0) {
@@ -109,42 +115,40 @@ useEffect(() => {
     return;
   }
 
-  // Não permitir que o dono do imóvel mande mensagem para si mesmo
   if (user.id === property.user_id) {
     toast({ title: 'Este imóvel é seu', description: 'Você não pode iniciar um chat consigo mesmo.' });
     return;
   }
 
   try {
-    // 1. Verificar se já existe uma sala para este imóvel entre estes dois usuários
-    const { data: existingRoom, error: fetchError } = await supabase
+    // 1. Usamos maybeSingle() para não disparar erro caso a sala não exista
+    const { data: existingRoom } = await supabase
       .from('chat_rooms')
       .select('id')
       .eq('property_id', property.id)
       .eq('buyer_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (existingRoom) {
-      // Se já existe, apenas navegamos
-      navigate('/messages');
+      // Passamos os parâmetros na URL para a MessagesPage saber qual abrir
+      navigate(`/messages?prop=${property.id}&user=${property.user_id}`);
       return;
     }
 
-    // 2. Se não existe, criamos a sala
+    // 2. Corrigido: 'seller_id' alterado para 'owner_id' para bater com o banco
     const { data: newRoom, error: createError } = await supabase
       .from('chat_rooms')
       .insert({
         property_id: property.id,
         buyer_id: user.id,
-        seller_id: property.user_id
+        owner_id: property.user_id // Verifique se o banco aceita 'owner_id'
       })
       .select()
       .single();
 
     if (createError) throw createError;
 
-    // 3. Redirecionar para a página de mensagens
-    navigate('/messages');
+    navigate(`/messages?prop=${property.id}&user=${property.user_id}`);
     toast({ title: 'Conversa iniciada!' });
 
   } catch (error) {
@@ -419,7 +423,7 @@ return (
             </div>
           </div>
 
-          {/* SIDEBAR */}
+          {/* --- SIDEBAR CORRIGIDA --- */}
           <div className="space-y-4 order-2 lg:order-2">
             <Card className="p-6 space-y-4 sticky top-20">
               <h3 className="font-semibold text-lg">Contactar Vendedor</h3>
@@ -429,38 +433,48 @@ return (
               </Button>
 
               <div className="space-y-3">
+                
                 <Button className="w-full" size="lg" asChild variant="outline">
-                  <a href={`https://wa.me/258${(property.contact_whatsapp || property.contact_phone || "").replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                  <a 
+                    href={`https://wa.me/${(property.contact_whatsapp || property.contact_phone || "").replace(/\D/g, '')}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center"
+                  >
                     <Phone className="w-4 h-4 mr-2" />
-                    WhatsApp
+                    <span>WhatsApp</span>
                   </a>
                 </Button>
+
                 <Button variant="outline" className="w-full" size="lg" asChild>
-                  <a href={`tel:${property.contact_phone}`}>
+                  <a href={`tel:${property.contact_phone}`} className="flex items-center justify-center">
                     <Phone className="w-4 h-4 mr-2" />
-                    Ligar
+                    <span>Ligar</span>
                   </a>
                 </Button>
+
                 <Button variant="outline" className="w-full" onClick={() => toggleFavorite.mutate()}>
                   <Heart className={`w-4 h-4 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
                   {isFavorited ? 'Remover dos Favoritos' : 'Adicionar aos Favoritos'}
                 </Button>
+
                 <Button variant="outline" className="w-full" onClick={handleShare}>
                   <Share2 className="w-4 h-4 mr-2" />
                   Partilhar
                 </Button>
+
                 <Button variant="ghost" className="w-full text-destructive" onClick={() => setShowReportDialog(true)}>
                   <Flag className="w-4 h-4 mr-2" />
                   Reportar Anúncio
                 </Button>
               </div>
+
               <div className="pt-4 border-t text-sm">
                 <span className="text-muted-foreground">Publicado por:</span>
                 <p className="font-medium">{property.user_profiles?.username}</p>
               </div>
             </Card>
           </div>
-
           {/* Descrição e Mapa */}
           <div className="lg:col-span-2 space-y-6 order-3 lg:mt-[-24px]"> 
             <div className="prose max-w-none border-t pt-6">

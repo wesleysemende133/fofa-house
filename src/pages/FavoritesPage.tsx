@@ -10,42 +10,35 @@ export default function FavoritesPage() {
   const { user } = useAuth();
 
   const { data: favorites, isLoading } = useQuery({
-    queryKey: ['favorites', user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      // Dentro da FavoritesPage.tsx, na sua queryFn:
-    const { data, error } = await supabase
+  queryKey: ['favorites', user?.id],
+  enabled: !!user?.id,
+  queryFn: async () => {
+ const { data, error } = await supabase
   .from('favorites')
-// O erro 400 acontecia porque aqui dizia "properties"
-.select(`
-  property_id,
-  houses (
-    *,
-    user_profiles(username, email)
-  )
-`) // Mudamos de properties para houses
+  .select(`
+    property_id,
+    houses!property_id (
+      *,
+      user_profiles (
+        username,
+        email
+      )
+    )
+  `)
   .eq('user_id', user!.id)
   .order('created_at', { ascending: false });
 
-if (error) throw error;
+    if (error) {
+      console.error("Erro na busca de favoritos:", error.message);
+      throw error;
+    }
 
-// O map deve extrair 'houses'
-return (data as any[])
-  .map(f => f.houses)
-  .filter(h => h !== null) as Property[];
-
-      if (error) {
-        console.error("Erro na busca de favoritos:", error.message);
-        throw error;
-      }
-
-      // Mapeamos os dados para extrair o objeto da casa (houses)
-      return (data as any[])
-        .map(f => f.houses)
-        .filter(house => house !== null) as Property[];
-    },
-  });
-
+    // Extraímos apenas o objeto 'houses' e filtramos nulos (caso uma casa tenha sido deletada)
+    return (data as any[])
+      .filter(f => f.houses !== null)
+      .map(f => f.houses) as Property[];
+  },
+});
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
