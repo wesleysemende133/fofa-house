@@ -35,8 +35,28 @@ export default function MessagesPage() {
     searchParams.get('user')
   );
 
+  // 1. Lógica para limpar notificações
+  const markAsRead = async (otherId?: string) => {
+    if (!user) return;
+
+    let query = supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+
+    // Se tivermos um ID de utilizador específico, limpamos apenas as notificações dele
+    if (otherId) {
+      query = query.ilike('link', `%user=${otherId}%`);
+    }
+
+    const { error } = await query;
+    if (error) console.error('Erro ao limpar notificações:', error);
+  };
+
   useEffect(() => {
     if (!user) return;
+    
     const fetchConversations = async () => {
       const { data, error } = await supabase.from('conversations_summary').select('*').order('property_id');
       if (error) return;
@@ -55,9 +75,19 @@ export default function MessagesPage() {
       }, {});
       setGroupedConversations(Object.values(grouped));
     };
+
     fetchConversations();
+    
+    // Limpa todas as notificações ao entrar na página
+    markAsRead();
   }, [user]);
 
+  // 2. Limpar notificações específicas quando mudas de chat
+  useEffect(() => {
+    if (selectedOtherUserId) {
+      markAsRead(selectedOtherUserId);
+    }
+  }, [selectedOtherUserId]);
   // Fecha o chat no mobile se o usuário usar o botão "Voltar" do navegador
   const handleBack = () => setSelectedOtherUserId(null);
 
