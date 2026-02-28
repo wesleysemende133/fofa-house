@@ -19,6 +19,7 @@ import { Property } from '@/types';
 import { PROPERTY_TYPES, LISTING_TYPES, CITIES } from '@/constants';
 import { formatPrice } from '@/lib/utils';
 import { ContactPhoneInput } from "@/components/phone-input";
+import PhotoUploader from '@/components/features/PhotoUploader';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -289,350 +290,301 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+  <div className="min-h-screen flex flex-col">
+    <Header />
 
-      <div className="container mx-auto px-4 py-8 flex-1">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Meus Imóveis</h1>
-            <p className="text-muted-foreground">Gerir as suas publicações</p>
-          </div>
-          <Button onClick={openNewDialog}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Imóvel
-          </Button>
+    <div className="container mx-auto px-4 py-8 flex-1">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Meus Imóveis</h1>
+          <p className="text-muted-foreground">Gerir as suas publicações</p>
         </div>
-
-        {isLoading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : properties && properties.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => (
-              <Card
-                key={property.id}
-                className="overflow-hidden hover:shadow-xl transition-all duration-300 border border-border bg-card"
-              >
-                {/* Imagem */}
-                <div className="relative aspect-[4/3] bg-muted">
-                  <img
-                    src={property.photos[0] || 'https://via.placeholder.com/400x300'}
-                    alt={property.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-
-                  {/* Badge Status */}
-                  <div className="absolute top-2 left-2 flex gap-2">
-                    <Badge variant={property.status === 'active' ? 'default' : 'secondary'}>
-                      {property.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </Badge>
-
-                    {property.is_premium && (
-                      <Badge className="bg-yellow-500 text-white border-0">
-                        Premium
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Conteúdo */}
-                <div className="p-4 space-y-2">
-                  <h3 className="font-semibold text-base line-clamp-1">
-                    {property.title}
-                  </h3>
-
-                  <p className="text-sm text-muted-foreground">
-                    {property.neighborhood}, {property.city}
-                  </p>
-
-                  <p className="text-2xl font-bold text-primary">
-                    {formatPrice(property.price)} MT
-                  </p>
-
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Eye className="w-4 h-4 mr-1" />
-                    {property.view_count || 0} visualizações
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => openEditDialog(property)}
-                    >
-                      <Pencil className="w-4 h-4 mr-1" />
-                      Editar
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        if (confirm('Tem certeza que deseja eliminar este imóvel?')) {
-                          deleteProperty.mutate(property.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-        ) : (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground mb-4">Ainda não tem imóveis publicados</p>
-            <Button onClick={openNewDialog}>
-              <Plus className="w-4 h-4 mr-2" />
-              Publicar Primeiro Imóvel
-            </Button>
-          </div>
-        )}
+        <Button onClick={openNewDialog}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Imóvel
+        </Button>
       </div>
 
-      {/* Property Form Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto p-0">
-          <DialogHeader className="px-6 py-4 border-b bg-muted/40">
-            <DialogTitle className="text-xl font-bold">
-              {editingProperty ? 'Editar Imóvel' : 'Publicar Novo Imóvel'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="p-6 space-y-8">
-
-            {/* INFORMAÇÕES PRINCIPAIS */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold border-b pb-2">Informações do Imóvel</h2>
-
-              <div>
-                <label className="text-sm font-medium">Título*</label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Ex: Casa T3 moderna na Polana"
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : properties && properties.length > 0 ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {properties.map((property) => (
+            <Card
+              key={property.id}
+              className="overflow-hidden hover:shadow-xl transition-all duration-300 border border-border bg-card"
+            >
+              {/* Imagem */}
+              <div className="relative aspect-[4/3] bg-muted">
+                <img
+                  src={property.photos[0] || 'https://via.placeholder.com/400x300'}
+                  alt={property.title}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                 />
+
+                {/* Badge Status */}
+                <div className="absolute top-2 left-2 flex gap-2">
+                  <Badge variant={property.status === 'active' ? 'default' : 'secondary'}>
+                    {property.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </Badge>
+
+                  {property.is_premium && (
+                    <Badge className="bg-yellow-500 text-white border-0">
+                      Premium
+                    </Badge>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Descrição*</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descreva os detalhes do imóvel..."
-                  rows={4}
-                />
-              </div>
+              {/* Conteúdo */}
+              <div className="p-4 space-y-2">
+                <h3 className="font-semibold text-base line-clamp-1">
+                  {property.title}
+                </h3>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Preço (MT)*</label>
-                  <Input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="Ex: 3500000"
-                  />
+                <p className="text-sm text-muted-foreground">
+                  {property.neighborhood}, {property.city}
+                </p>
+
+                <p className="text-2xl font-bold text-primary">
+                  {formatPrice(property.price)} MT
+                </p>
+
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Eye className="w-4 h-4 mr-1" />
+                  {property.view_count || 0} visualizações
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium">Tipo de Imóvel</label>
-                  <select
-                    value={formData.property_type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, property_type: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => openEditDialog(property)}
                   >
-                    {PROPERTY_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
+                    <Pencil className="w-4 h-4 mr-1" />
+                    Editar
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      if (confirm('Tem certeza que deseja eliminar este imóvel?')) {
+                        deleteProperty.mutate(property.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <p className="text-muted-foreground mb-4">Ainda não tem imóveis publicados</p>
+          <Button onClick={openNewDialog}>
+            <Plus className="w-4 h-4 mr-2" />
+            Publicar Primeiro Imóvel
+          </Button>
+        </div>
+      )}
+    </div>
+
+    {/* Property Form Dialog */}
+    <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto p-0">
+        <DialogHeader className="px-6 py-4 border-b bg-muted/40">
+          <DialogTitle className="text-xl font-bold">
+            {editingProperty ? 'Editar Imóvel' : 'Publicar Novo Imóvel'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="p-6 space-y-8">
+          {/* INFORMAÇÕES PRINCIPAIS */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold border-b pb-2">Informações do Imóvel</h2>
+
+            <div>
+              <label className="text-sm font-medium">Título*</label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Ex: Casa T3 moderna na Polana"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Descrição*</label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descreva os detalhes do imóvel..."
+                rows={4}
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Preço (MT)*</label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="Ex: 3500000"
+                />
               </div>
 
               <div>
-                <label className="text-sm font-medium">Tipo de Anúncio</label>
+                <label className="text-sm font-medium">Tipo de Imóvel</label>
                 <select
-                  value={formData.listing_type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, listing_type: e.target.value }))}
+                  value={formData.property_type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, property_type: e.target.value }))}
                   className="w-full px-3 py-2 rounded-md border border-input bg-background"
                 >
-                  {LISTING_TYPES.map(type => (
+                  {PROPERTY_TYPES.map(type => (
                     <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* LOCALIZAÇÃO */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold border-b pb-2">Localização</h2>
-
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Cidade*</label>
-                  <select
-                    value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-md border border-input bg-background"
-                  >
-                    <option value="">Selecione</option>
-                    {CITIES.map(city => (
-                      <option key={city} value={city}>{city}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Distrito*</label>
-                  <Input
-                    value={formData.district}
-                    onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Bairro*</label>
-                  <Input
-                    value={formData.neighborhood}
-                    onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <Input
-                  type="number"
-                  step="any"
-                  placeholder="Latitude (opcional)"
-                  value={formData.latitude}
-                  onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
-                />
-                <Input
-                  type="number"
-                  step="any"
-                  placeholder="Longitude (opcional)"
-                  value={formData.longitude}
-                  onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
-                />
-              </div>
+            <div>
+              <label className="text-sm font-medium">Tipo de Anúncio</label>
+              <select
+                value={formData.listing_type}
+                onChange={(e) => setFormData(prev => ({ ...prev, listing_type: e.target.value }))}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background"
+              >
+                {LISTING_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
             </div>
-
-            {/* CONTACTOS */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold border-b pb-2">Contactos</h2>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Telefone*</label>
-                  <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1">
-                    <ContactPhoneInput
-                      value={formData.contact_phone}
-                      onChange={(v: string) => setFormData(prev => ({ ...prev, contact_phone: v }))}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">WhatsApp</label>
-                  <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1">
-                    <ContactPhoneInput
-                      value={formData.contact_whatsapp}
-                      onChange={(v: string) => setFormData(prev => ({ ...prev, contact_whatsapp: v }))}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* FOTOS ESTILO OLX */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold border-b pb-2">
-                Fotos ({formData.photos.length}/10)
-              </h2>
-
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-muted transition cursor-pointer">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileUpload}
-                  disabled={uploading || formData.photos.length >= 10}
-                  className="hidden"
-                  id="photoUpload"
-                />
-                <label htmlFor="photoUpload" className="cursor-pointer">
-                  <p className="font-medium">Clique para adicionar fotos</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Máximo 10 imagens
-                  </p>
-                </label>
-              </div>
-
-              {uploading && (
-                <div className="space-y-2">
-                  <div className="w-full bg-muted rounded-full h-3">
-                    <div
-                      className="bg-primary h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-right text-muted-foreground">
-                    {uploadProgress}% carregado
-                  </p>
-                </div>
-              )}
-
-              {formData.photos.length > 0 && (
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                  {formData.photos.map((photo, idx) => (
-                    <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border">
-                      <img
-                        src={photo}
-                        alt=""
-                        className="w-full h-full object-cover group-hover:scale-105 transition"
-                      />
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        className="absolute top-1 right-1 w-7 h-7 opacity-0 group-hover:opacity-100 transition"
-                        onClick={() => removePhoto(idx)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* BOTÃO */}
-            <Button
-              onClick={() => saveProperty.mutate()}
-              className="w-full h-12 text-lg font-semibold"
-              disabled={
-                !formData.title ||
-                !formData.description ||
-                !formData.price ||
-                !formData.city ||
-                !formData.district ||
-                !formData.neighborhood ||
-                !formData.contact_phone
-              }
-            >
-              {editingProperty ? 'Atualizar Imóvel' : 'Publicar Imóvel'}
-            </Button>
-
           </div>
-        </DialogContent>
 
-      </Dialog>
+          {/* LOCALIZAÇÃO */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold border-b pb-2">Localização</h2>
 
-      <Footer />
-    </div>
-  );
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium">Cidade*</label>
+                <select
+                  value={formData.city}
+                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                >
+                  <option value="">Selecione</option>
+                  {CITIES.map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Distrito*</label>
+                <Input
+                  value={formData.district}
+                  onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Bairro*</label>
+                <Input
+                  value={formData.neighborhood}
+                  onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <Input
+                type="number"
+                step="any"
+                placeholder="Latitude (opcional)"
+                value={formData.latitude}
+                onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
+              />
+              <Input
+                type="number"
+                step="any"
+                placeholder="Longitude (opcional)"
+                value={formData.longitude}
+                onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          {/* CONTACTOS */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold border-b pb-2">Contactos</h2>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Telefone*</label>
+                <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1">
+                  <ContactPhoneInput
+                    value={formData.contact_phone}
+                    onChange={(v: string) => setFormData(prev => ({ ...prev, contact_phone: v }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">WhatsApp</label>
+                <div className="flex h-10 w-full rounded-md border border-input bg-background px-1 py-1">
+                  <ContactPhoneInput
+                    value={formData.contact_whatsapp}
+                    onChange={(v: string) => setFormData(prev => ({ ...prev, contact_whatsapp: v }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FOTOS OTIMIZADAS COM COMPONENTE EXTERNO */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold border-b pb-2">
+              Fotos ({formData.photos.length}/10)
+            </h2>
+            
+            <PhotoUploader 
+              userId={user!.id}
+              photos={formData.photos}
+              maxPhotos={10}
+              onChange={(newUrls) => setFormData(prev => ({ ...prev, photos: newUrls }))}
+            />
+          </div>
+
+          {/* BOTÃO */}
+          <Button
+            onClick={() => saveProperty.mutate()}
+            className="w-full h-12 text-lg font-semibold"
+            disabled={
+              !formData.title ||
+              !formData.description ||
+              !formData.price ||
+              !formData.city ||
+              !formData.district ||
+              !formData.neighborhood ||
+              !formData.contact_phone ||
+              uploading // Este estado 'uploading' agora deve vir do PhotoUploader ou ser removido se não for usar bloqueio global
+            }
+          >
+            {editingProperty ? 'Atualizar Imóvel' : 'Publicar Imóvel'}
+          </Button>
+
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <Footer />
+  </div>
+);
 }

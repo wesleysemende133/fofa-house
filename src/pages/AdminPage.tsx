@@ -40,49 +40,52 @@ export default function AdminPage() {
   };
 
   // --- SEGURANÇA: Verificação de Admin ---
-  useEffect(() => {
-    async function verifyAdmin() {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+useEffect(() => {
+  async function verifyAdmin() {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        if (userError || !user) {
-          navigate('/login');
-          return;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("Erro ao ler perfil:", profileError.message);
-          return; 
-        }
-
-        if (profile?.role === 'admin') {
-          setHasAccess(true);
-        } else {
-          toast({ 
-            title: "Acesso Negado", 
-            description: "Apenas administradores podem acessar esta página.", 
-            variant: "destructive" 
-          });
-          navigate('/'); 
-        }
-      } catch (err) {
-        console.error("Erro crítico na verificação:", err);
-      } finally {
-        setIsVerifying(false);
+      if (userError || !user) {
+        navigate('/login');
+        return;
       }
+
+      // --- DEPURACAO ---
+      console.log("A verificar admin para:", user.email, "ID:", user.id);
+
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single(); // Mudado para single para falhar explicitamente se o RLS bloquear
+
+      if (profileError) {
+        console.error("Erro RLS/Perfil:", profileError);
+        toast({ title: "Erro de Permissão", description: profileError.message, variant: "destructive" });
+        return; 
+      }
+
+      console.log("Perfil obtido:", profile);
+
+      if (profile?.role === 'admin') {
+        setHasAccess(true);
+      } else {
+        toast({ 
+          title: "Acesso Negado", 
+          description: `Role encontrada: ${profile?.role}. Necessário: admin.`, 
+          variant: "destructive" 
+        });
+        navigate('/'); 
+      }
+    } catch (err) {
+      console.error("Erro crítico:", err);
+    } finally {
+      setIsVerifying(false);
     }
-    verifyAdmin();
-  }, [navigate, toast]);
-
-  // --- QUERIES DE DADOS ---
-
-  // 1. Logs de Auditoria
+  }
+  verifyAdmin();
+}, [navigate, toast]);
+  // --- QUERIES DE DADOS (Mantidas igual) ---
   const { data: auditLogs, refetch: refetchLogs } = useQuery({
     queryKey: ['admin-logs'],
     queryFn: async () => {
@@ -97,12 +100,11 @@ export default function AdminPage() {
     enabled: hasAccess,
   });
 
-  // 2. Denúncias
-  const { data: reports, isLoading } = useQuery({
+  const { data: reports, isLoading: loadingReports } = useQuery({
     queryKey: ['admin-reports'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('admin_reports_detailed') 
+        .from('admin_reports_detailed') // Assumindo que esta view existe e tem RLS correto
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -112,7 +114,6 @@ export default function AdminPage() {
     enabled: hasAccess,
   });
 
-  // 3. Utilizadores
   const { data: users } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
@@ -126,7 +127,6 @@ export default function AdminPage() {
     enabled: hasAccess,
   });
 
-  // 4. Inventário Completo (Sem fotos para ser leve)
   const { data: allHouses, isLoading: loadingHouses } = useQuery({
     queryKey: ['admin-all-houses'],
     queryFn: async () => {
@@ -144,7 +144,6 @@ export default function AdminPage() {
     enabled: hasAccess,
   });
 
-  // 5. Estatísticas
   const { data: housesCount } = useQuery({
     queryKey: ['admin-houses-count'],
     queryFn: async () => {
@@ -179,9 +178,7 @@ export default function AdminPage() {
   const admins = users?.filter(u => u.role === 'admin') || [];
   const regularUsers = users?.filter(u => u.role !== 'admin') || [];
 
-  // --- MUTAÇÕES ---
-
-  // Promover/Despromover Admin
+  // --- MUTAÇÕES (Mantidas igual) ---
   const toggleAdmin = useMutation({
     mutationFn: async ({ userId, newRole, username }: { userId: string, newRole: string | null, username: string }) => {
       const { error } = await supabase
@@ -203,7 +200,6 @@ export default function AdminPage() {
     }
   });
 
-  // Resolver Denúncia
   const resolveReport = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('reports').update({ status: 'resolved' }).eq('id', id);
@@ -217,7 +213,6 @@ export default function AdminPage() {
     }
   });
 
-  // Banir/Apagar Imóvel
   const deleteProperty = useMutation({
     mutationFn: async ({ propertyId, reportId }: { propertyId: string, reportId?: string }) => {
       // 1. Apagar imóvel
@@ -248,6 +243,7 @@ export default function AdminPage() {
 
   if (!hasAccess) return null;
 
+  // --- RENDERIZAÇÃO (Mantida igual) ---
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header />
@@ -381,7 +377,7 @@ export default function AdminPage() {
 
           {/* 2. ABA DE DENÚNCIAS */}
           <TabsContent value="reports" className="space-y-4">
-            {isLoading ? (
+            {loadingReports ? (
               <p>A carregar...</p>
             ) : reports && reports.length > 0 ? (
               reports.map((report: any) => (
@@ -515,3 +511,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+

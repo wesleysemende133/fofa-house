@@ -1,99 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/layout/Header';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import { Smile, ChevronLeft, MessageSquare } from 'lucide-react';
-
-type Conversation = {
-  property_id: number;
-  property_title: string;
-  property_image: string;
-  other_user_id: string;
-  other_user_name: string;
-  other_user_avatar: string | null;
-};
-
-type GroupedConversation = {
-  property_id: number;
-  property_title: string;
-  property_image: string;
-  chats: Conversation[];
-};
+import { useMessagesPage } from '@/hooks/useMessagesPage';
 
 export default function MessagesPage() {
-  const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const [groupedConversations, setGroupedConversations] = useState<GroupedConversation[]>([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
-    searchParams.get('prop') ? Number(searchParams.get('prop')) : null
-  );
-  const [selectedOtherUserId, setSelectedOtherUserId] = useState<string | null>(
-    searchParams.get('user')
-  );
-
-  // 1. Lógica para limpar notificações
-  const markAsRead = async (otherId?: string) => {
-    if (!user) return;
-
-    let query = supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false);
-
-    // Se tivermos um ID de utilizador específico, limpamos apenas as notificações dele
-    if (otherId) {
-      query = query.ilike('link', `%user=${otherId}%`);
-    }
-
-    const { error } = await query;
-    if (error) console.error('Erro ao limpar notificações:', error);
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    
-    const fetchConversations = async () => {
-      const { data, error } = await supabase.from('conversations_summary').select('*').order('property_id');
-      if (error) return;
-      
-      const grouped = data.reduce((acc: Record<number, GroupedConversation>, curr: Conversation) => {
-        if (!acc[curr.property_id]) {
-          acc[curr.property_id] = {
-            property_id: curr.property_id,
-            property_title: curr.property_title,
-            property_image: curr.property_image,
-            chats: [],
-          };
-        }
-        acc[curr.property_id].chats.push(curr);
-        return acc;
-      }, {});
-      setGroupedConversations(Object.values(grouped));
-    };
-
-    fetchConversations();
-    
-    // Limpa todas as notificações ao entrar na página
-    markAsRead();
-  }, [user]);
-
-  // 2. Limpar notificações específicas quando mudas de chat
-  useEffect(() => {
-    if (selectedOtherUserId) {
-      markAsRead(selectedOtherUserId);
-    }
-  }, [selectedOtherUserId]);
-  // Fecha o chat no mobile se o usuário usar o botão "Voltar" do navegador
-  const handleBack = () => setSelectedOtherUserId(null);
+  const {
+    groupedConversations,
+    selectedPropertyId,
+    selectedOtherUserId,
+    handleSelectChat,
+    handleBack
+  } = useMessagesPage();
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-white overflow-hidden">
-      {/* Header: Desaparece no mobile quando o chat está aberto para maximizar espaço */}
+      {/* Header: Desaparece no mobile quando o chat está aberto */}
       <div className={`${selectedOtherUserId ? 'hidden md:block' : 'block'}`}>
         <Header />
       </div>
@@ -126,10 +49,7 @@ export default function MessagesPage() {
                   return (
                     <div
                       key={chat.other_user_id}
-                      onClick={() => {
-                        setSelectedPropertyId(prop.property_id);
-                        setSelectedOtherUserId(chat.other_user_id);
-                      }}
+                      onClick={() => handleSelectChat(prop.property_id, chat.other_user_id)}
                       className={`p-4 flex items-center gap-3 cursor-pointer transition-all active:bg-orange-100
                         ${active ? 'bg-orange-50 border-r-4 border-orange-500' : 'hover:bg-gray-50'}`}
                     >
@@ -181,7 +101,6 @@ export default function MessagesPage() {
                 
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm text-slate-800 truncate">Chat Fofa House</p>
-                  <p className="text-[10px] text-orange-500 font-bold uppercase tracking-widest">Online</p>
                 </div>
               </div>
 

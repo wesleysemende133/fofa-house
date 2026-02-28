@@ -67,9 +67,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   
-  // Substitua pelo seu email real entre as aspas
-  const isAdminEmail = user?.email === 'seu-email-aqui@gmail.com';
+  // ATUALIZADO: Email definido para wesleysemende@gmail.com
+  const isAdminEmail = user?.email === 'wesleysemende@gmail.com';
 
+  // Verifica se o utilizador está logado E se é admin pelo email ou pela role
   if (!user || (!isAdminEmail && user.role !== 'admin')) {
     console.log("Acesso negado para:", user?.email, "Role:", user?.role);
     return <Navigate to="/" replace />;
